@@ -782,6 +782,54 @@
 
   </script>
 
+<script>
+async function updateGMI() {
+  const gmiElement = document.getElementById('gmiValue');
+  if (!gmiElement) return;
+
+  try {
+    const start = new Date();
+    start.setDate(start.getDate() - 30);
+
+    const url =
+      '/api/v1/entries.json?find[dateString][$gte]=' +
+      encodeURIComponent(start.toISOString()) +
+      '&count=10000';
+
+    const response = await fetch(url, {
+      cache: 'no-store'
+    });
+
+    if (!response.ok) throw new Error('API error');
+
+    const entries = await response.json();
+
+    const values = entries
+      .map(e => Number(e.sgv))
+      .filter(v => Number.isFinite(v) && v > 20 && v < 600);
+
+    if (values.length === 0) {
+      gmiElement.textContent = '--';
+      return;
+    }
+
+    const meanGlucose =
+      values.reduce((sum, value) => sum + value, 0) / values.length;
+
+    // GMI = 3.31 + 0.02392 × mean glucose (mg/dL)
+    const gmi = 3.31 + (0.02392 * meanGlucose);
+
+    gmiElement.textContent = gmi.toFixed(1) + '%';
+  } catch (error) {
+    console.log('GMI calculation error:', error);
+    gmiElement.textContent = '--';
+  }
+}
+
+updateGMI();
+setInterval(updateGMI, 5 * 60 * 1000);
+</script>
 </body>
+  
 
 </html>
